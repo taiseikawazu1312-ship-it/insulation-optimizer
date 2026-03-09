@@ -1,7 +1,11 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  outputFileTracingIncludes: {
+    "/api/**/*": ["./src/generated/prisma/**/*"],
+    "/": ["./src/generated/prisma/**/*"],
+  },
+  serverExternalPackages: ["@sparticuz/chromium"],
 };
 
 export default nextConfig;

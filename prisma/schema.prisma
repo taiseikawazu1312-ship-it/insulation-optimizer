@@ -1,0 +1,244 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Organization {
+  id        String   @id @default(uuid())
+  name      String
+  slug      String   @unique
+  plan      String   @default("free")
+  maxUsers  Int      @default(10)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users              User[]
+  projects           Project[]
+  insulationMaterials InsulationMaterial[]
+  windowProducts     WindowProduct[]
+  doorProducts       DoorProduct[]
+}
+
+model User {
+  id             String    @id @default(uuid())
+  organizationId String
+  email          String    @unique
+  name           String
+  passwordHash   String
+  role           String    @default("operator")
+  isActive       Boolean   @default(true)
+  lastLoginAt    DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+
+  createdProjects Project[] @relation("ProjectCreatedBy")
+  updatedProjects Project[] @relation("ProjectUpdatedBy")
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model Project {
+  id             String    @id @default(uuid())
+  organizationId String
+  name           String
+  region         Int
+  targetGrade    String
+  structureType  String
+  totalFloorArea Float
+  stories        Int       @default(2)
+  status         String    @default("draft")
+  notes          String?
+  createdBy      String
+  updatedBy      String?
+  isDeleted      Boolean   @default(false)
+  deletedAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  organization  Organization @relation(fields: [organizationId], references: [id])
+  createdByUser User         @relation("ProjectCreatedBy", fields: [createdBy], references: [id])
+  updatedByUser User?        @relation("ProjectUpdatedBy", fields: [updatedBy], references: [id])
+
+  envelopeParts       EnvelopePart[]
+  openings            Opening[]
+  optimizationResults OptimizationResult[]
+  foundationSpec      FoundationSpec?
+
+  @@index([organizationId])
+  @@index([createdBy])
+  @@index([status])
+}
+
+model EnvelopePart {
+  id                     String  @id @default(uuid())
+  projectId              String
+  partType               String
+  orientation            String?
+  area                   Float
+  adjacentSpace          String  @default("external_air")
+  insulationMaterialId   String?
+  insulationThickness    Float?
+  additionalInsulationId String?
+  additionalThickness    Float?
+  uValue                 Float?
+  heatLoss               Float?
+  cost                   Float?
+  createdAt              DateTime @default(now())
+  updatedAt              DateTime @updatedAt
+
+  project              Project             @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  insulationMaterial   InsulationMaterial?  @relation("PrimaryInsulation", fields: [insulationMaterialId], references: [id])
+  additionalInsulation InsulationMaterial?  @relation("AdditionalInsulation", fields: [additionalInsulationId], references: [id])
+
+  @@index([projectId])
+}
+
+model Opening {
+  id              String   @id @default(uuid())
+  projectId       String
+  name            String?
+  orientation     String
+  width           Float
+  height          Float
+  openingType     String
+  windowProductId String?
+  doorProductId   String?
+  attachment      String   @default("none")
+  hasSunshade     Boolean  @default(false)
+  uwValue         Float?
+  etaDValue       Float?
+  heatLoss        Float?
+  solarGain       Float?
+  cost            Float?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  project       Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  windowProduct WindowProduct? @relation(fields: [windowProductId], references: [id])
+  doorProduct   DoorProduct?   @relation(fields: [doorProductId], references: [id])
+
+  @@index([projectId])
+}
+
+model FoundationSpec {
+  id                   String   @id @default(uuid())
+  projectId            String   @unique
+  foundationType       String   @default("slab")
+  perimeterLength      Float
+  slabArea             Float?
+  slabEdgePosition     String   @default("above_gl")
+  insulationPosition   String   @default("none")
+  insulationLength     String   @default("none")
+  insulationMaterialId String?
+  psiValue             Float?
+  cost                 Float?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  project            Project            @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  insulationMaterial InsulationMaterial? @relation(fields: [insulationMaterialId], references: [id])
+}
+
+model InsulationMaterial {
+  id               String   @id @default(uuid())
+  organizationId   String
+  name             String
+  category         String
+  conductivity     Float
+  applicableParts  String   @default("[]")
+  thicknessOptions String   @default("[]")
+  unitPricePerM2   String   @default("{}")
+  density          Float?
+  manufacturer     String?
+  productCode      String?
+  isActive         Boolean  @default(true)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+
+  primaryEnvelopeParts    EnvelopePart[]   @relation("PrimaryInsulation")
+  additionalEnvelopeParts EnvelopePart[]   @relation("AdditionalInsulation")
+  foundationSpecs         FoundationSpec[]
+
+  @@index([organizationId])
+}
+
+model WindowProduct {
+  id            String   @id @default(uuid())
+  organizationId String
+  productLine   String
+  windowType    String
+  frameMaterial String
+  glassType     String
+  glassLayers   Int
+  spacerType    String?
+  gasFill       Boolean  @default(false)
+  solarType     String   @default("acquisition")
+  sizeCode      String?
+  width         Float
+  height        Float
+  sashWidth     Float?
+  uwValue       Float
+  ugValue       Float?
+  etaG          Float?
+  listPrice     Int?
+  estimatedCost Int?
+  fireRated     Boolean  @default(false)
+  manufacturer  String   @default("YKK AP")
+  isActive      Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  openings     Opening[]
+
+  @@index([organizationId])
+}
+
+model DoorProduct {
+  id             String   @id @default(uuid())
+  organizationId String
+  name           String
+  doorType       String
+  material       String?
+  hasGlass       Boolean  @default(false)
+  glassType      String?
+  udValue        Float
+  listPrice      Int?
+  manufacturer   String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  organization Organization @relation(fields: [organizationId], references: [id])
+  openings     Opening[]
+
+  @@index([organizationId])
+}
+
+model OptimizationResult {
+  id              String   @id @default(uuid())
+  projectId       String
+  targetGrade     String
+  achievedUA      Float
+  achievedEtaAC   Float?
+  achievedEtaAH   Float?
+  totalCost       Float
+  specsJson       String   @default("{}")
+  calculationJson String   @default("{}")
+  isSelected      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+
+  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([projectId])
+}
