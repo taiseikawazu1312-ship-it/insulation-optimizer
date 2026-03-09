@@ -29,7 +29,6 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Separator } from "@/components/ui/separator";
 import { TARGET_GRADES, type TargetGrade } from "@/types";
 
 interface OptimizationResult {
@@ -105,7 +104,7 @@ export default function OptimizePage() {
     try {
       const [projRes, resultsRes] = await Promise.all([
         fetch(`/api/v1/projects/${projectId}`),
-        fetch(`/api/v1/projects/${projectId}/optimization-results`),
+        fetch(`/api/v1/projects/${projectId}/results`),
       ]);
 
       if (projRes.ok) {
@@ -122,7 +121,10 @@ export default function OptimizePage() {
           const latest = j.data[0];
           setResult(latest);
           try {
-            setSpecs(JSON.parse(latest.specsJson));
+            const parsed = typeof latest.specsJson === "string"
+              ? JSON.parse(latest.specsJson)
+              : latest.specs ?? null;
+            setSpecs(parsed);
           } catch {
             setSpecs(null);
           }
@@ -144,17 +146,29 @@ export default function OptimizePage() {
     try {
       const res = await fetch(
         `/api/v1/projects/${projectId}/optimize`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({}),
+        }
       );
       const json = await res.json();
       if (json.success) {
         toast.success("最適化が完了しました");
-        setResult(json.data);
-        try {
-          setSpecs(JSON.parse(json.data.specsJson));
-        } catch {
-          setSpecs(null);
-        }
+        const data = json.data;
+        setResult({
+          id: data.resultId,
+          targetGrade: projectGrade,
+          achievedUA: data.achievedUA,
+          achievedEtaAC: data.achievedEtaAC ?? null,
+          achievedEtaAH: data.achievedEtaAH ?? null,
+          totalCost: data.totalCost,
+          specsJson: JSON.stringify(data.specs),
+          calculationJson: "{}",
+          isSelected: false,
+          createdAt: new Date().toISOString(),
+        });
+        setSpecs(data.specs ?? null);
       } else {
         toast.error(json.error?.message ?? "最適化に失敗しました");
       }
@@ -181,7 +195,7 @@ export default function OptimizePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -219,29 +233,6 @@ export default function OptimizePage() {
             <ArrowRight className="h-4 w-4" data-icon="inline-end" />
           </Button>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        {[
-          { label: "外皮", href: `/projects/${projectId}/envelope`, active: false },
-          { label: "開口部", href: `/projects/${projectId}/openings`, active: false },
-          { label: "基礎", href: `/projects/${projectId}/foundation`, active: false },
-          { label: "最適化", href: `/projects/${projectId}/optimize`, active: true },
-          { label: "比較", href: `/projects/${projectId}/compare`, active: false },
-        ].map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab.active
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
       </div>
 
       {!result ? (
@@ -440,6 +431,6 @@ export default function OptimizePage() {
           )}
         </>
       )}
-    </div>
+    </>
   );
 }

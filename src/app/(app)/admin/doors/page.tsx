@@ -303,7 +303,7 @@ export default function DoorsPage() {
                 <Select
                   value={form.doorType}
                   onValueChange={(val) =>
-                    setForm((f) => ({ ...f, doorType: val }))
+                    setForm((f) => ({ ...f, doorType: val ?? "" }))
                   }
                 >
                   <SelectTrigger>

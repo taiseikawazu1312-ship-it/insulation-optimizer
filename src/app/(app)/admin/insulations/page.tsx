@@ -61,7 +61,7 @@ const emptyForm = {
   conductivity: "",
   applicableParts: [] as string[],
   thicknessOptions: "",
-  unitPricePerM2: "",
+  unitPricePerM2: {} as Record<string, string>,
   density: "",
   manufacturer: "",
   productCode: "",
@@ -107,9 +107,9 @@ export default function InsulationsPage() {
       conductivity: String(mat.conductivity),
       applicableParts: mat.applicableParts,
       thicknessOptions: mat.thicknessOptions.join(", "),
-      unitPricePerM2: Object.entries(mat.unitPricePerM2)
-        .map(([k, v]) => `${k}:${v}`)
-        .join(", "),
+      unitPricePerM2: Object.fromEntries(
+        Object.entries(mat.unitPricePerM2).map(([k, v]) => [k, String(v)])
+      ),
       density: mat.density ? String(mat.density) : "",
       manufacturer: mat.manufacturer ?? "",
       productCode: mat.productCode ?? "",
@@ -133,16 +133,13 @@ export default function InsulationsPage() {
       .filter((n) => !isNaN(n) && n > 0);
   };
 
-  const parseUnitPrices = (input: string): Record<string, number> => {
-    const result: Record<string, number> = {};
-    input.split(",").forEach((pair) => {
-      const [key, val] = pair.split(":").map((s) => s.trim());
-      if (key && val) {
-        const num = parseFloat(val);
-        if (!isNaN(num)) result[key] = num;
-      }
-    });
-    return result;
+  const parsedThicknesses = parseThicknessOptions(form.thicknessOptions);
+
+  const updateUnitPrice = (thickness: string, value: string) => {
+    setForm((prev) => ({
+      ...prev,
+      unitPricePerM2: { ...prev.unitPricePerM2, [thickness]: value },
+    }));
   };
 
   const handleSubmit = async () => {
@@ -153,7 +150,11 @@ export default function InsulationsPage() {
     }
 
     const thicknessOptions = parseThicknessOptions(form.thicknessOptions);
-    const unitPricePerM2 = parseUnitPrices(form.unitPricePerM2);
+    const unitPricePerM2: Record<string, number> = {};
+    for (const [k, v] of Object.entries(form.unitPricePerM2)) {
+      const num = parseFloat(v);
+      if (!isNaN(num) && num >= 0) unitPricePerM2[k] = num;
+    }
 
     if (thicknessOptions.length === 0) {
       toast.error("厚さオプションを1つ以上入力してください");
@@ -407,19 +408,30 @@ export default function InsulationsPage() {
                 カンマ区切りで入力
               </p>
             </div>
-            <div className="grid gap-2">
-              <Label>単価 (厚さ:円/m2)</Label>
-              <Input
-                value={form.unitPricePerM2}
-                onChange={(e) =>
-                  setForm((f) => ({ ...f, unitPricePerM2: e.target.value }))
-                }
-                placeholder="100:1500, 105:1600, 120:1900"
-              />
-              <p className="text-xs text-muted-foreground">
-                厚さ:単価 をカンマ区切りで入力
-              </p>
-            </div>
+            {parsedThicknesses.length > 0 && (
+              <div className="grid gap-2">
+                <Label>単価 (円/m2)</Label>
+                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+                  {parsedThicknesses.map((t) => (
+                    <div key={t} className="flex items-center gap-1.5">
+                      <span className="w-14 text-right text-xs text-muted-foreground">
+                        {t}mm
+                      </span>
+                      <Input
+                        type="number"
+                        min="0"
+                        placeholder="0"
+                        value={form.unitPricePerM2[String(t)] ?? ""}
+                        onChange={(e) =>
+                          updateUnitPrice(String(t), e.target.value)
+                        }
+                        className="h-7 text-xs"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-4">
               <div className="grid gap-2">
                 <Label>密度 (kg/m3)</Label>

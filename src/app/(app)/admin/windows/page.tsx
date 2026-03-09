@@ -428,7 +428,7 @@ export default function WindowsPage() {
                 <Select
                   value={form.windowType}
                   onValueChange={(val) =>
-                    setForm((f) => ({ ...f, windowType: val }))
+                    setForm((f) => ({ ...f, windowType: val ?? "" }))
                   }
                 >
                   <SelectTrigger>
@@ -450,7 +450,7 @@ export default function WindowsPage() {
                 <Select
                   value={form.frameMaterial}
                   onValueChange={(val) =>
-                    setForm((f) => ({ ...f, frameMaterial: val }))
+                    setForm((f) => ({ ...f, frameMaterial: val ?? "" }))
                   }
                 >
                   <SelectTrigger>
@@ -504,7 +504,7 @@ export default function WindowsPage() {
                 <Select
                   value={form.solarType}
                   onValueChange={(val) =>
-                    setForm((f) => ({ ...f, solarType: val }))
+                    setForm((f) => ({ ...f, solarType: val ?? "acquisition" }))
                   }
                 >
                   <SelectTrigger>

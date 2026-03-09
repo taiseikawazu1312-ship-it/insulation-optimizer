@@ -62,7 +62,7 @@ export default function FoundationPage() {
       const [projRes, foundRes, matsRes] = await Promise.all([
         fetch(`/api/v1/projects/${projectId}`),
         fetch(`/api/v1/projects/${projectId}/foundation`),
-        fetch("/api/v1/insulation-materials"),
+        fetch("/api/v1/admin/insulations"),
       ]);
 
       if (projRes.ok) {
@@ -137,7 +137,7 @@ export default function FoundationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -166,29 +166,6 @@ export default function FoundationPage() {
             <ArrowRight className="h-4 w-4" data-icon="inline-end" />
           </Button>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        {[
-          { label: "外皮", href: `/projects/${projectId}/envelope`, active: false },
-          { label: "開口部", href: `/projects/${projectId}/openings`, active: false },
-          { label: "基礎", href: `/projects/${projectId}/foundation`, active: true },
-          { label: "最適化", href: `/projects/${projectId}/optimize`, active: false },
-          { label: "比較", href: `/projects/${projectId}/compare`, active: false },
-        ].map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab.active
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
       </div>
 
       <div className="mx-auto max-w-2xl">
@@ -353,6 +330,6 @@ export default function FoundationPage() {
           </CardContent>
         </Card>
       </div>
-    </div>
+    </>
   );
 }

@@ -1,6 +1,6 @@
 import { NextRequest } from "next/server";
 import { z } from "zod";
-import { requireRole } from "@/lib/auth-helpers";
+import { requireAuth, requireRole } from "@/lib/auth-helpers";
 import { successResponse, handleApiError } from "@/lib/api-response";
 import { getPrisma } from "@/lib/prisma";
 
@@ -28,7 +28,7 @@ const createWindowSchema = z.object({
 
 export async function GET(_req: NextRequest) {
   try {
-    const session = await requireRole("admin");
+    const session = await requireAuth();
     const prisma = await getPrisma();
 
     const windows = await prisma.windowProduct.findMany({

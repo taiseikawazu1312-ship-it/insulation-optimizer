@@ -28,17 +28,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import { TARGET_GRADES, type TargetGrade } from "@/types";
 
 interface ComparisonResult {
-  targetGrade: string;
+  grade: string;
   achievedUA: number;
   achievedEtaAC: number | null;
   totalCost: number;
   feasible: boolean;
 }
 
-const COMPARISON_GRADES: TargetGrade[] = [
+const ALL_GRADES: TargetGrade[] = [
   "grade4",
   "grade5",
   "ZEH",
@@ -54,28 +56,20 @@ export default function ComparePage() {
   const [projectName, setProjectName] = useState("");
   const [projectGrade, setProjectGrade] = useState("");
   const [results, setResults] = useState<ComparisonResult[]>([]);
+  const [selectedGrades, setSelectedGrades] = useState<Set<TargetGrade>>(
+    new Set(ALL_GRADES)
+  );
   const [loading, setLoading] = useState(true);
   const [comparing, setComparing] = useState(false);
 
   const fetchData = useCallback(async () => {
     try {
-      const [projRes, compareRes] = await Promise.all([
-        fetch(`/api/v1/projects/${projectId}`),
-        fetch(`/api/v1/projects/${projectId}/compare`),
-      ]);
-
+      const projRes = await fetch(`/api/v1/projects/${projectId}`);
       if (projRes.ok) {
         const j = await projRes.json();
         if (j.success) {
           setProjectName(j.data.name);
           setProjectGrade(j.data.targetGrade);
-        }
-      }
-
-      if (compareRes.ok) {
-        const j = await compareRes.json();
-        if (j.success && j.data.length > 0) {
-          setResults(j.data);
         }
       }
     } catch {
@@ -89,17 +83,48 @@ export default function ComparePage() {
     fetchData();
   }, [fetchData]);
 
+  const toggleGrade = (grade: TargetGrade) => {
+    setSelectedGrades((prev) => {
+      const next = new Set(prev);
+      if (next.has(grade)) {
+        next.delete(grade);
+      } else {
+        next.add(grade);
+      }
+      return next;
+    });
+  };
+
   const runComparison = async () => {
+    const grades = Array.from(selectedGrades);
+    if (grades.length < 2) {
+      toast.error("比較には2つ以上の等級を選択してください");
+      return;
+    }
+
     setComparing(true);
     try {
       const res = await fetch(
         `/api/v1/projects/${projectId}/compare`,
-        { method: "POST" }
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ grades }),
+        }
       );
       const json = await res.json();
       if (json.success) {
         toast.success("比較が完了しました");
-        setResults(json.data);
+        const mapped = (json.data.results ?? json.data).map(
+          (r: { grade?: string; targetGrade?: string; achievedUA: number; achievedEtaAC?: number | null; totalCost: number; feasible?: boolean }) => ({
+            grade: r.grade ?? r.targetGrade,
+            achievedUA: r.achievedUA,
+            achievedEtaAC: r.achievedEtaAC ?? null,
+            totalCost: r.totalCost,
+            feasible: r.feasible ?? true,
+          })
+        );
+        setResults(mapped);
       } else {
         toast.error(json.error?.message ?? "比較に失敗しました");
       }
@@ -117,9 +142,13 @@ export default function ComparePage() {
       maximumFractionDigits: 0,
     }).format(cost);
 
-  const minCostResult = results.length > 0
-    ? results.reduce((min, r) => (r.feasible && r.totalCost < min.totalCost ? r : min), results.find((r) => r.feasible) ?? results[0])
-    : null;
+  const feasibleResults = results.filter((r) => r.feasible);
+  const minCostResult =
+    feasibleResults.length > 0
+      ? feasibleResults.reduce((min, r) =>
+          r.totalCost < min.totalCost ? r : min
+        )
+      : null;
 
   if (loading) {
     return (
@@ -130,7 +159,7 @@ export default function ComparePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -152,39 +181,39 @@ export default function ComparePage() {
           ) : (
             <Play className="h-4 w-4" data-icon="inline-start" />
           )}
-          {comparing ? "比較中..." : "全等級で比較"}
+          {comparing ? "比較中..." : "比較実行"}
         </Button>
       </div>
 
-      {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        {[
-          { label: "外皮", href: `/projects/${projectId}/envelope`, active: false },
-          { label: "開口部", href: `/projects/${projectId}/openings`, active: false },
-          { label: "基礎", href: `/projects/${projectId}/foundation`, active: false },
-          { label: "最適化", href: `/projects/${projectId}/optimize`, active: false },
-          { label: "比較", href: `/projects/${projectId}/compare`, active: true },
-        ].map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab.active
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
-      </div>
+      {/* Grade Selection */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm">比較する等級を選択</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap gap-4">
+            {ALL_GRADES.map((grade) => (
+              <div key={grade} className="flex items-center gap-2">
+                <Checkbox
+                  id={`grade-${grade}`}
+                  checked={selectedGrades.has(grade)}
+                  onCheckedChange={() => toggleGrade(grade)}
+                />
+                <Label htmlFor={`grade-${grade}`} className="text-sm cursor-pointer">
+                  {TARGET_GRADES[grade]}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
 
       {results.length === 0 ? (
         <Card>
           <CardContent className="py-12 text-center">
             <Play className="mx-auto h-10 w-10 text-muted-foreground/40" />
             <p className="mt-3 text-sm text-muted-foreground">
-              全等級での最適化比較を実行してください
+              等級を選択して比較を実行してください
             </p>
             <Button className="mt-4" onClick={runComparison} disabled={comparing}>
               {comparing ? "比較中..." : "比較を実行"}
@@ -216,19 +245,19 @@ export default function ComparePage() {
                 </TableHeader>
                 <TableBody>
                   {results.map((r) => {
-                    const isCurrentGrade = r.targetGrade === projectGrade;
+                    const isCurrentGrade = r.grade === projectGrade;
                     const costDiff =
                       minCostResult && r.feasible
                         ? r.totalCost - minCostResult.totalCost
                         : null;
                     return (
                       <TableRow
-                        key={r.targetGrade}
+                        key={r.grade}
                         className={isCurrentGrade ? "bg-primary/5" : ""}
                       >
                         <TableCell className="font-medium">
-                          {TARGET_GRADES[r.targetGrade as TargetGrade] ??
-                            r.targetGrade}
+                          {TARGET_GRADES[r.grade as TargetGrade] ??
+                            r.grade}
                           {isCurrentGrade && (
                             <Badge
                               variant="secondary"
@@ -273,15 +302,14 @@ export default function ComparePage() {
 
           {/* Cost Summary Cards */}
           <div className="grid gap-4 sm:grid-cols-3">
-            {results
-              .filter((r) => r.feasible)
+            {feasibleResults
               .slice(0, 3)
               .map((r) => (
-                <Card key={r.targetGrade} size="sm">
+                <Card key={r.grade} size="sm">
                   <CardHeader>
                     <CardTitle className="text-sm">
-                      {TARGET_GRADES[r.targetGrade as TargetGrade] ??
-                        r.targetGrade}
+                      {TARGET_GRADES[r.grade as TargetGrade] ??
+                        r.grade}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -297,6 +325,6 @@ export default function ComparePage() {
           </div>
         </>
       )}
-    </div>
+    </>
   );
 }

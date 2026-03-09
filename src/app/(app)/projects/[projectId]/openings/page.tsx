@@ -98,8 +98,8 @@ export default function OpeningsPage() {
       const [projRes, openingsRes, winsRes, doorsRes] = await Promise.all([
         fetch(`/api/v1/projects/${projectId}`),
         fetch(`/api/v1/projects/${projectId}/openings`),
-        fetch("/api/v1/window-products"),
-        fetch("/api/v1/door-products"),
+        fetch("/api/v1/admin/windows"),
+        fetch("/api/v1/admin/doors"),
       ]);
 
       if (projRes.ok) {
@@ -183,7 +183,7 @@ export default function OpeningsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -212,29 +212,6 @@ export default function OpeningsPage() {
             <ArrowRight className="h-4 w-4" data-icon="inline-end" />
           </Button>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        {[
-          { label: "外皮", href: `/projects/${projectId}/envelope`, active: false },
-          { label: "開口部", href: `/projects/${projectId}/openings`, active: true },
-          { label: "基礎", href: `/projects/${projectId}/foundation`, active: false },
-          { label: "最適化", href: `/projects/${projectId}/optimize`, active: false },
-          { label: "比較", href: `/projects/${projectId}/compare`, active: false },
-        ].map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab.active
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
       </div>
 
       {/* Openings Table */}
@@ -442,6 +419,6 @@ export default function OpeningsPage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

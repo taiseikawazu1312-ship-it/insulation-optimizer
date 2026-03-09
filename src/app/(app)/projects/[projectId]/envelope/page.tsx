@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 import Link from "next/link";
 import { toast } from "sonner";
 import {
@@ -14,7 +14,6 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Select,
@@ -35,8 +34,6 @@ import {
   PART_TYPES,
   ORIENTATIONS,
   ADJACENT_SPACES,
-  type PartType,
-  type Orientation,
 } from "@/types";
 
 interface InsulationMaterial {
@@ -70,7 +67,6 @@ const emptyPart = (): EnvelopePart => ({
 
 export default function EnvelopePage() {
   const params = useParams();
-  const router = useRouter();
   const projectId = params.projectId as string;
 
   const [parts, setParts] = useState<EnvelopePart[]>([]);
@@ -84,7 +80,7 @@ export default function EnvelopePage() {
       const [projRes, partsRes, matsRes] = await Promise.all([
         fetch(`/api/v1/projects/${projectId}`),
         fetch(`/api/v1/projects/${projectId}/envelope`),
-        fetch("/api/v1/insulation-materials"),
+        fetch("/api/v1/admin/insulations"),
       ]);
 
       if (projRes.ok) {
@@ -169,7 +165,7 @@ export default function EnvelopePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-3">
@@ -198,29 +194,6 @@ export default function EnvelopePage() {
             <ArrowRight className="h-4 w-4" data-icon="inline-end" />
           </Button>
         </div>
-      </div>
-
-      {/* Navigation Tabs */}
-      <div className="flex gap-1 border-b">
-        {[
-          { label: "外皮", href: `/projects/${projectId}/envelope`, active: true },
-          { label: "開口部", href: `/projects/${projectId}/openings`, active: false },
-          { label: "基礎", href: `/projects/${projectId}/foundation`, active: false },
-          { label: "最適化", href: `/projects/${projectId}/optimize`, active: false },
-          { label: "比較", href: `/projects/${projectId}/compare`, active: false },
-        ].map((tab) => (
-          <Link
-            key={tab.href}
-            href={tab.href}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
-              tab.active
-                ? "border-primary text-primary"
-                : "border-transparent text-muted-foreground hover:text-foreground"
-            }`}
-          >
-            {tab.label}
-          </Link>
-        ))}
       </div>
 
       {/* Parts Table */}
@@ -428,6 +401,6 @@ export default function EnvelopePage() {
           </div>
         </CardContent>
       </Card>
-    </div>
+    </>
   );
 }

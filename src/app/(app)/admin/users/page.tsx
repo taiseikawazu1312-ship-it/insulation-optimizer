@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { toast } from "sonner";
-import { Plus, Users, Loader2 } from "lucide-react";
+import { Plus, Users, Pencil, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -31,6 +31,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
 import { ROLES } from "@/types";
 
 interface User {
@@ -38,11 +39,12 @@ interface User {
   email: string;
   name: string;
   role: string;
+  isActive?: boolean;
   lastLoginAt: string | null;
   createdAt: string;
 }
 
-const emptyForm = {
+const emptyCreateForm = {
   email: "",
   name: "",
   password: "",
@@ -52,9 +54,11 @@ const emptyForm = {
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [createDialogOpen, setCreateDialogOpen] = useState(false);
+  const [editTarget, setEditTarget] = useState<User | null>(null);
   const [submitting, setSubmitting] = useState(false);
-  const [form, setForm] = useState(emptyForm);
+  const [createForm, setCreateForm] = useState(emptyCreateForm);
+  const [editForm, setEditForm] = useState({ role: "operator", isActive: true });
 
   const fetchUsers = useCallback(async () => {
     setLoading(true);
@@ -74,16 +78,24 @@ export default function UsersPage() {
   }, [fetchUsers]);
 
   const openCreate = () => {
-    setForm(emptyForm);
-    setDialogOpen(true);
+    setCreateForm(emptyCreateForm);
+    setCreateDialogOpen(true);
   };
 
-  const handleSubmit = async () => {
-    if (!form.email || !form.name || !form.password) {
+  const openEdit = (user: User) => {
+    setEditTarget(user);
+    setEditForm({
+      role: user.role,
+      isActive: user.isActive !== false,
+    });
+  };
+
+  const handleCreate = async () => {
+    if (!createForm.email || !createForm.name || !createForm.password) {
       toast.error("全ての必須項目を入力してください");
       return;
     }
-    if (form.password.length < 8) {
+    if (createForm.password.length < 8) {
       toast.error("パスワードは8文字以上必要です");
       return;
     }
@@ -93,15 +105,40 @@ export default function UsersPage() {
       const res = await fetch("/api/v1/admin/users", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(form),
+        body: JSON.stringify(createForm),
       });
       const json = await res.json();
       if (json.success) {
         toast.success("ユーザーを追加しました");
-        setDialogOpen(false);
+        setCreateDialogOpen(false);
         fetchUsers();
       } else {
         toast.error(json.error?.message ?? "追加に失敗しました");
+      }
+    } catch {
+      toast.error("通信エラーが発生しました");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleEdit = async () => {
+    if (!editTarget) return;
+
+    setSubmitting(true);
+    try {
+      const res = await fetch(`/api/v1/admin/users/${editTarget.id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(editForm),
+      });
+      const json = await res.json();
+      if (json.success) {
+        toast.success("ユーザーを更新しました");
+        setEditTarget(null);
+        fetchUsers();
+      } else {
+        toast.error(json.error?.message ?? "更新に失敗しました");
       }
     } catch {
       toast.error("通信エラーが発生しました");
@@ -164,6 +201,7 @@ export default function UsersPage() {
                   <TableHead className="hidden sm:table-cell">
                     作成日
                   </TableHead>
+                  <TableHead className="w-16">操作</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -191,6 +229,15 @@ export default function UsersPage() {
                     <TableCell className="hidden sm:table-cell text-muted-foreground">
                       {formatDate(user.createdAt)}
                     </TableCell>
+                    <TableCell>
+                      <Button
+                        variant="ghost"
+                        size="icon-xs"
+                        onClick={() => openEdit(user)}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                      </Button>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
@@ -201,9 +248,9 @@ export default function UsersPage() {
 
       {/* Create User Dialog */}
       <Dialog
-        open={dialogOpen}
+        open={createDialogOpen}
         onOpenChange={(open) => {
-          if (!open) setDialogOpen(false);
+          if (!open) setCreateDialogOpen(false);
         }}
       >
         <DialogContent className="sm:max-w-md">
@@ -217,9 +264,9 @@ export default function UsersPage() {
             <div className="grid gap-2">
               <Label>名前 *</Label>
               <Input
-                value={form.name}
+                value={createForm.name}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, name: e.target.value }))
+                  setCreateForm((f) => ({ ...f, name: e.target.value }))
                 }
                 placeholder="山田 太郎"
               />
@@ -228,9 +275,9 @@ export default function UsersPage() {
               <Label>メールアドレス *</Label>
               <Input
                 type="email"
-                value={form.email}
+                value={createForm.email}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, email: e.target.value }))
+                  setCreateForm((f) => ({ ...f, email: e.target.value }))
                 }
                 placeholder="user@example.com"
               />
@@ -239,9 +286,9 @@ export default function UsersPage() {
               <Label>パスワード *</Label>
               <Input
                 type="password"
-                value={form.password}
+                value={createForm.password}
                 onChange={(e) =>
-                  setForm((f) => ({ ...f, password: e.target.value }))
+                  setCreateForm((f) => ({ ...f, password: e.target.value }))
                 }
                 placeholder="8文字以上"
               />
@@ -249,9 +296,9 @@ export default function UsersPage() {
             <div className="grid gap-2">
               <Label>ロール</Label>
               <Select
-                value={form.role}
+                value={createForm.role}
                 onValueChange={(val) =>
-                  setForm((f) => ({ ...f, role: val }))
+                  setCreateForm((f) => ({ ...f, role: val ?? "operator" }))
                 }
               >
                 <SelectTrigger>
@@ -270,13 +317,73 @@ export default function UsersPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setDialogOpen(false)}
+              onClick={() => setCreateDialogOpen(false)}
               disabled={submitting}
             >
               キャンセル
             </Button>
-            <Button onClick={handleSubmit} disabled={submitting}>
+            <Button onClick={handleCreate} disabled={submitting}>
               {submitting ? "追加中..." : "追加"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit User Dialog */}
+      <Dialog
+        open={editTarget !== null}
+        onOpenChange={(open) => {
+          if (!open) setEditTarget(null);
+        }}
+      >
+        <DialogContent className="sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>ユーザーの編集</DialogTitle>
+            <DialogDescription>
+              {editTarget?.name} ({editTarget?.email})
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-2">
+            <div className="grid gap-2">
+              <Label>ロール</Label>
+              <Select
+                value={editForm.role}
+                onValueChange={(val) =>
+                  setEditForm((f) => ({ ...f, role: val ?? "operator" }))
+                }
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {Object.entries(ROLES).map(([key, label]) => (
+                    <SelectItem key={key} value={key}>
+                      {label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between">
+              <Label>アクティブ</Label>
+              <Switch
+                checked={editForm.isActive}
+                onCheckedChange={(checked) =>
+                  setEditForm((f) => ({ ...f, isActive: !!checked }))
+                }
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setEditTarget(null)}
+              disabled={submitting}
+            >
+              キャンセル
+            </Button>
+            <Button onClick={handleEdit} disabled={submitting}>
+              {submitting ? "更新中..." : "更新"}
             </Button>
           </DialogFooter>
         </DialogContent>
