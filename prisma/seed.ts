@@ -4,9 +4,9 @@ import { hash } from "bcryptjs";
 import { v4 as uuidv4 } from "uuid";
 
 async function main() {
-  const adapter = new PrismaLibSql({
-    url: process.env.DATABASE_URL || "file:./prisma/dev.db",
-  });
+  const url = process.env.TURSO_DATABASE_URL || process.env.DATABASE_URL || "file:./prisma/dev.db";
+  const authToken = process.env.TURSO_AUTH_TOKEN;
+  const adapter = new PrismaLibSql(authToken ? { url, authToken } : { url });
   const prisma = new PrismaClient({ adapter });
 
   console.log("Seeding database...");
