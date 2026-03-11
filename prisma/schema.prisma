@@ -71,7 +71,6 @@ model Project {
   openings            Opening[]
   optimizationResults OptimizationResult[]
   foundationSpec      FoundationSpec?
-  elevationCalc       ElevationCalc?
 
   @@index([organizationId])
   @@index([createdBy])
@@ -224,32 +223,6 @@ model DoorProduct {
   openings     Opening[]
 
   @@index([organizationId])
-}
-
-model ElevationCalc {
-  id               String   @id @default(uuid())
-  projectId        String   @unique
-  widthN           Float?
-  widthE           Float?
-  widthS           Float?
-  widthW           Float?
-  maxHeight        Float?
-  eaveHeight       Float?
-  firstFloorToEave Float?
-  windowsN         String   @default("[]")
-  windowsE         String   @default("[]")
-  windowsS         String   @default("[]")
-  windowsW         String   @default("[]")
-  wallAreaN        Float?
-  wallAreaE        Float?
-  wallAreaS        Float?
-  wallAreaW        Float?
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
-
-  project Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
-
-  @@index([projectId])
 }
 
 model OptimizationResult {
