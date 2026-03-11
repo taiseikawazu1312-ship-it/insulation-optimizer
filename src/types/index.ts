@@ -168,6 +168,26 @@ export const ROLE_HIERARCHY: Record<string, number> = {
   operator: 1,
 };
 
+// ========== 方位（4方向） ==========
+export const DIRECTIONS = {
+  N: "北",
+  E: "東",
+  S: "南",
+  W: "西",
+} as const;
+
+export type Direction = keyof typeof DIRECTIONS;
+
+// ========== 立面図窓タイプ ==========
+export const ELEVATION_WINDOW_TYPES = {
+  sliding: "引違い窓",
+  casement_vertical: "縦スベリ出し窓",
+  fixed: "FIX窓",
+  casement: "すべり出し窓",
+  awning: "外倒し窓",
+  hung: "片上げ下げ窓",
+} as const;
+
 // ========== ドアタイプ ==========
 export const DOOR_TYPES = {
   entrance: "玄関ドア",

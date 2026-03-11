@@ -4,6 +4,7 @@ import { useParams, usePathname } from "next/navigation";
 import Link from "next/link";
 
 const STEPS = [
+  { label: "立面図面積", segment: "elevation" },
   { label: "外皮", segment: "envelope" },
   { label: "開口部", segment: "openings" },
   { label: "基礎", segment: "foundation" },
